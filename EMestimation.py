@@ -29,14 +29,20 @@ def Estep(p0, U, T):
     alpha = zeros((Nt, Nh))
     alpha[0] = U[0]*p0  #  P(S1)*P(Y1|S1)
     for t in arange(1, Nt):
-        alpha[t] = dot(T, alpha[t-1])*U[t, :] ## P[St, Y_{1:t}]
-        alpha[t] = alpha[t]/sum(alpha[t]) ## P[St | Y_{1:t}] = P[St, Y_{1:t}]/sum_{St}P[St, Y_{1:t}]
+        ## P[St, Y_{1:t}]
+        alpha[t] = dot(T, alpha[t-1])*U[t, :]
+        ## P[St | Y_{1:t}] = P[St, Y_{1:t}]/sum_{St}P[St, Y_{1:t}]
+        alpha[t] = alpha[t]/sum(alpha[t])
     beta = zeros((Nt, Nh))
     beta[Nt-1, :] = 1.
     for t in arange(Nt-1)[::-1]:
-        beta[t] = dot(beta[t+1], T)*U[t+1] ## P[Y_{t+1:T} | St]
-        beta[t] = beta[t]/sum(beta[t]) ## P[St | Y_{t+1:T}] = P[Y_{t+1:T} | St]/sum_{St}P[Y_{t+1:T} | St]
-    S0 = alpha*beta ## P[St | Y_{1:T}] = P[Y_{t+1:T} | St]P[St, Y_{1:t}]/sum_{St}P[Y_{t+1:T}, St | Y_{1:t}]
+        ## P[Y_{t+1:T} | St]
+        beta[t] = dot(beta[t+1], T)*U[t+1]
+        ## P[St | Y_{t+1:T}] = P[Y_{t+1:T} | St]/sum_{St}P[Y_{t+1:T} | St]
+        beta[t] = beta[t]/sum(beta[t])
+    ## P[St | Y_{1:T}] = P[Y_{t+1:T} | St]P[St, Y_{1:t}]
+    ##                      / sum_{St}P[Y_{t+1:T}, St | Y_{1:t}]
+    S0 = alpha*beta
     S = (S0.T/psum(S0)).T
     S2 = zeros((Nh, Nh))
     for t in arange(1, Nt):
@@ -45,19 +51,20 @@ def Estep(p0, U, T):
     return S, S2
 @jit(nopython=True)
 def EstepLite(p0, U, T):
-    """Perform Estep() without returning the transition distribution S2. Used for justE()."""
+    """Perform Estep() without returning the transition distribution S2. Used
+    for justE()."""
     Nt, Nh = U.shape
     alpha = zeros((Nt, Nh))
-    alpha[0] = U[0]*p0  #  P(S1)*P(Y1|S1)
+    alpha[0] = U[0]*p0
     for t in arange(1, Nt):
-        alpha[t] = dot(T, alpha[t-1])*U[t, :] ## P[St, Y_{1:t}]
-        alpha[t] = alpha[t]/sum(alpha[t]) ## P[St | Y_{1:t}] = P[St, Y_{1:t}]/sum_{St}P[St, Y_{1:t}]
+        alpha[t] = dot(T, alpha[t-1])*U[t, :]
+        alpha[t] = alpha[t]/sum(alpha[t])
     beta = zeros((Nt, Nh))
     beta[Nt-1, :] = 1.
     for t in arange(Nt-1)[::-1]:
-        beta[t] = dot(beta[t+1], T)*U[t+1] ## P[Y_{t+1:T} | St]
-        beta[t] = beta[t]/sum(beta[t]) ## P[St | Y_{t+1:T}] = P[Y_{t+1:T} | St]/sum_{St}P[Y_{t+1:T} | St]
-    S0 = alpha*beta ## P[St | Y_{1:T}] = P[Y_{t+1:T} | St]P[St, Y_{1:t}]/sum_{St}P[Y_{t+1:T}, St | Y_{1:t}]
+        beta[t] = dot(beta[t+1], T)*U[t+1]
+        beta[t] = beta[t]/sum(beta[t])
+    S0 = alpha*beta
     S = (S0.T/ psum(S0)).T
     return S
 @jit(nopython=True)
@@ -83,11 +90,6 @@ def Viterbi(p0, U, T):
 class EMestimation(object):
     """Estimate hidden states and model parameters from a set of paths."""
 
-    # def _printVec(self, v):
-    #     s = ''
-    #     for n in arange(array(v).size):
-    #         s += '{'+'{0}'.format(n)+':1.3g}, '
-    #     return s[:-2].format(*v)
     def allViterbi(self, DXarray, pInds, S, pars):
         """Compute maximum likelihood paths after EM finishes."""
         Npoints, _ = DXarray.shape
@@ -102,7 +104,8 @@ class EMestimation(object):
             HS_ML[a:b] = Viterbi(p0, U, T)
         return HS_ML
     def allMAP(self, DXarray, pInds, S, pars):
-        """Extract MAP tracks from EM output, i.e., from max_S P(S_t| {X_1:T}, {I_1:T})."""
+        """Extract MAP tracks from EM output, i.e., from max_S P(S_t| {X_1:T},
+        {I_1:T})."""
         Npoints, _ = DXarray.shape
         Np = pInds.size - 1
         HS_ML = empty(Npoints, dtype=int16)
@@ -136,9 +139,6 @@ class EMestimation(object):
                 p0[p] = S[a]
                 S2[p] = S2p
             pars = self.Mstep(DXarray, pInds, S, S2)
-            # print(n, pars)
-            # print(self._printVec(pars))
-            # print(list(pars))
         return pars, S
     def justE(self, DXarray, pInds, N, pars):
         """Compute the hidden states with fixed parameters."""
@@ -163,18 +163,21 @@ class EMestimation(object):
         return S
     def Pinit(self, Np, pars):
         """Initialize hidden state distribution for each path.
-        Returns an array of shape (Np, Nh), normalized to a probability distribution along axis=1."""
+        Returns an array of shape (Np, Nh), normalized to a probability
+        distribution along axis=1."""
         raise NotImplementedError
     def Mstep(self, DXarray, pInds, S, S2):
-        """Extract maximimum likelihood parameters given hidden state distribution for the E step.
-        Returns a tuple of model parameter values."""
+        """Extract maximimum likelihood parameters given hidden state
+        distribution for the E step. Returns a tuple of model parameter
+        values."""
         raise NotImplementedError
     def UandT(self, dx, pars, Q):
-        """Evaluate the observation and hidden state probability matrices for a given path.
-        Returns (Nt x Nh) array U and (Nh x Nh) array T."""
+        """Evaluate the observation and hidden state probability matrices for
+        a given path. Returns (Nt x Nh) array U and (Nh x Nh) array T."""
         raise NotImplementedError
     def getQ(self, pars):
-        """Generate the propagator matrix for the hidden state Markov process."""
+        """Generate the propagator matrix for the hidden state Markov
+        process."""
         raise NotImplementedError
 ################################################################################
 TwoState_dtype = [('NVstates', int64),
@@ -204,7 +207,8 @@ class TwoStateMixture(EMestimation):
         p0[:, self.NVstates:] = k1/(k1 + k2)/self.NVstates
         return p0
     def getQ(self, pars):
-        """Generate the propagator matrix for the hidden state Markov process."""
+        """Generate the propagator matrix for the hidden state Markov
+        process."""
         k1, k2 = pars[0], pars[1]
         A = array(((-k1, k2), (k1, -k2)))
         Q = eye(2) + A
@@ -214,7 +218,8 @@ class TwoStateMixture(EMestimation):
             Q += Ap
         return Q
     def UandT(self, dx, pars, Q):
-        """Evaluate the observation and hidden state probability matrices for a given path."""
+        """Evaluate the observation and hidden state probability matrices for a
+        given path."""
         k1, k2, mV, D = pars
         Nt, _ = dx.shape
         U = zeros((Nt, self.Nh))
@@ -229,7 +234,8 @@ class TwoStateMixture(EMestimation):
         T[self.NVstates:, self.NVstates:] = I*Q[1, 1]
         return U, T
     def Mstep(self, DXarray, pInds, S, S2):
-        """Extract maximimum likelihood parameters given hidden state distribution for the E step."""
+        """Extract maximimum likelihood parameters given hidden state
+        distribution for the E step."""
         Np = pInds.size - 1
         Npoints, Nh = S.shape
         P = pmean(S2.reshape(Np, -1).T).reshape(Nh, Nh)
