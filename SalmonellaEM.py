@@ -18,8 +18,8 @@ class ThreeStateModel(EMestimation):
         Ntheta = Nphi*4
         self.Nh = Ntheta*Nphi + 2
         Nrun = Ntheta*Nphi
-        theta, phi = linspace(0, 2*pi, Ntheta+1)[:-1], linspace(0, 0.5*pi, Nphi+1)[:-1]
-        # THETA, PHI = meshgrid(theta, phi)
+        theta = linspace(0, 2*pi, Ntheta+1)[:-1]
+        phi = linspace(0, 0.5*pi, Nphi+1)[:-1]
         THETA = zeros((Nphi, Ntheta))
         PHI = zeros((Nphi, Ntheta))
         for i in arange(Nphi):
@@ -57,7 +57,8 @@ class ThreeStateModel(EMestimation):
         p0[:, 2:] = pinit[2]/(self.Nh - 2)
         return p0
     def getQ(self, pars):
-        """Generate the propagator matrix for the hidden state Markov process."""
+        """Generate the propagator matrix for the hidden state Markov
+        process."""
         k1, k2, k3, k4 = pars[:4]
         A = array(((-k1, k2, 0.), (k1, -k2-k3, k4), (0., k3, -k4)))
         Q = eye(3) + A
@@ -67,7 +68,8 @@ class ThreeStateModel(EMestimation):
             Q += Ap
         return Q
     def UandT(self, dx, pars, Q):
-        """Evaluate the observation and hidden state probability matrices for a given path."""
+        """Evaluate the observation and hidden state probability matrices for a
+        given path."""
         k1, k2, k3, k4 = pars[:4]
         mV, Dtrap, Dtum, Dswim = pars[4:]
         Nt, _ = dx.shape
@@ -90,7 +92,8 @@ class ThreeStateModel(EMestimation):
         #     T += Ap
         return U, T0
     def Mstep(self, DXarray, pInds, S, S2):
-        """Extract maximimum likelihood parameters given hidden state distribution for the E step."""
+        """Extract maximimum likelihood parameters given hidden state
+        distribution for the E step."""
         Np = pInds.size - 1
         Npoints, Nh = S.shape
         ## transition rates
@@ -151,8 +154,8 @@ class FourStateModel(EMestimation):
         Ntheta = Nphi*4
         self.Nh = Ntheta*Nphi + 3
         Nrun = Ntheta*Nphi
-        theta, phi = linspace(0, 2*pi, Ntheta+1)[:-1], linspace(0, 0.5*pi, Nphi+1)[:-1]
-        # THETA, PHI = meshgrid(theta, phi)
+        theta = linspace(0, 2*pi, Ntheta+1)[:-1]
+        phi = linspace(0, 0.5*pi, Nphi+1)[:-1]
         THETA = zeros((Nphi, Ntheta))
         PHI = zeros((Nphi, Ntheta))
         for i in arange(Nphi):
@@ -191,7 +194,8 @@ class FourStateModel(EMestimation):
         # p0[:, 2:] = pinit[2]/(self.Nh - 2)
         return p0
     def getQ(self, pars):
-        """Generate the propagator matrix for the hidden state Markov process."""
+        """Generate the propagator matrix for the hidden state Markov
+        process."""
         k1, k2, k3, k4, k5, k6 = pars[:6]
         A = array(((-k1, k2, 0., 0.), (k1, -k2-k3, k4, 0.),
                    (0., k3, -k4-k5, k6), (0., 0., k5, -k6)))
@@ -202,7 +206,8 @@ class FourStateModel(EMestimation):
             Q += Ap
         return Q
     def UandT(self, dx, pars, Q):
-        """Evaluate the observation and hidden state probability matrices for a given path."""
+        """Evaluate the observation and hidden state probability matrices for a
+        given path."""
         k1, k2, k3, k4, k5, k6 = pars[:6]
         mV, Dtrap, Dtum1, Dtum2, Dswim = pars[6:]
         Nt, _ = dx.shape
@@ -220,7 +225,8 @@ class FourStateModel(EMestimation):
         T0[3:, 3:] = eye(self.Nh - 3)*Q[3, 3]
         return U, T0
     def Mstep(self, DXarray, pInds, S, S2):
-        """Extract maximimum likelihood parameters given hidden state distribution for the E step."""
+        """Extract maximimum likelihood parameters given hidden state
+        distribution for the E step."""
         Np = pInds.size - 1
         Npoints, Nh = S.shape
         ## transition rates
